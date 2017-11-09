@@ -1,17 +1,23 @@
 'use strict';
 var express = require('express');
 var router = express.Router();
-var tweetBank = require('../tweetBank');
+var client = require('../db/')
+// var tweetBank = require('../tweetBank');
 
 module.exports = function makeRouterWithSockets (io) {
 
   // a reusable function
   function respondWithAllTweets (req, res, next){
-    var allTheTweets = tweetBank.list();
-    res.render('index', {
-      title: 'Twitter.js',
-      tweets: allTheTweets,
-      showForm: true
+    client.query(`SELECT content , users.name , users.picture_url 
+      FROM tweets 
+      INNER JOIN users 
+      ON users.id  = tweets.user_id `, function (err, result) {
+    if (err) return next(err); // pass errors to Express
+    var tweets = result.rows;
+    // var picture_url = result.rows
+    console.log(tweets)
+    // console.log(picture_url)
+    res.render('index', { title: 'Twitter.js', tweets: tweets, showForm: true, picture_url:tweets.picture_url });
     });
   }
 
@@ -21,12 +27,19 @@ module.exports = function makeRouterWithSockets (io) {
 
   // single-user page
   router.get('/users/:username', function(req, res, next){
-    var tweetsForName = tweetBank.find({ name: req.params.username });
-    res.render('index', {
-      title: 'Twitter.js',
-      tweets: tweetsForName,
-      showForm: true,
-      username: req.params.username
+    var username = req.params.username;
+    console.log(username)
+    client.query(`SELECT users.name, content , users.picture_url 
+      FROM tweets 
+      INNER JOIN users 
+      ON users.id  = tweets.user_id 
+      WHERE name=$1`, ['username'], function (err, result) {
+    if (err) return next(err); // pass errors to Express
+    var tweets = result.rows;
+    // var picture_url = result.rows
+    console.log(tweets)
+    // console.log(picture_url)
+    res.render('index', { title: 'Twitter.js', username:username, showForm: true, picture_url:tweets.picture_url });
     });
   });
 
